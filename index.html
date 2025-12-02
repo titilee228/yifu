@@ -3,135 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的智能衣橱 Pro</title>
+    <title>智能衣橱 Pro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
-    <link rel="stylesheet" href="style.css?v=5"> </head>
+    <link rel="stylesheet" href="style.css?v=7">
+</head>
 <body>
-    <div class="container">
-        <div class="top-navbar">
-            <div class="nav-header">
-                <div class="brand-area">
-                    <h1>👕 智能衣橱 <span id="count" class="count-badge">(0)</span></h1>
-                    <div class="action-buttons">
-                        <button id="uploadBtn" class="btn-primary pulse-effect">➕ 添加新衣</button>
-                        <button id="forceScanBtn" class="btn-secondary">🔍 重新识别未分类</button>
-                        <button id="fillDescBtn" class="btn-secondary">📝 补全描述</button>
-                    </div>
-                </div>
-                <div class="search-area">
-                    <input type="text" id="searchInput" placeholder="🔍 搜索 (如: 红色 围巾 #1234)..." class="search-box">
-                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+    <div class="app-container">
+        <header class="navbar">
+            <div class="nav-left">
+                <h1 class="logo">👗 智能衣橱 <span id="count" class="badge">0</span></h1>
+                <div class="main-actions">
+                    <button id="uploadBtn" class="btn btn-primary">➕ 添加新衣</button>
+                    <input type="file" id="fileInput" accept="image/*" hidden>
                 </div>
             </div>
-
-            <div class="filter-bar">
-                <div class="filter-group">
-                    <label>🏷️ 分类:</label>
-                    <select id="filterCategory"><option value="">全部</option></select>
-                </div>
-                <div class="filter-group">
-                    <label>🌤️ 天气:</label>
-                    <select id="filterSeason"><option value="">全部</option></select>
-                </div>
-                <div class="filter-group">
-                    <label>🎨 颜色:</label>
-                    <select id="filterColor"><option value="">全部</option></select>
-                </div>
-                <button id="resetFiltersBtn" class="btn-text">↺ 重置筛选</button>
+            
+            <div class="nav-center">
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 搜索 (如: 红色 卫衣 #1234)...">
             </div>
-        </div>
 
-        <div class="main-content">
-            <div id="gallery" class="gallery">
+            <div class="nav-right filters">
+                <select id="filterCategory" class="filter-select"><option value="">📂 所有分类</option></select>
+                <select id="filterSeason" class="filter-select"><option value="">🌤️ 所有季节</option></select>
+                <select id="filterColor" class="filter-select"><option value="">🎨 所有颜色</option></select>
+                <button id="resetFiltersBtn" class="btn btn-text">重置</button>
+            </div>
+        </header>
+
+        <main class="content-area">
+            <div id="gallery" class="gallery-grid">
                 </div>
             
-            <div id="pagination" class="pagination-container">
-                </div>
-        </div>
-
-        <div id="autoScanStatus" class="auto-scan-status">
-            <div><span class="scan-loading"></span><span>AI 正在整理中...</span></div>
-            <span id="scanProgress">0/0</span>
-        </div>
+            <div id="pagination" class="pagination"></div>
+        </main>
     </div>
 
     <div id="cropModal" class="modal">
-        <div class="modal-content crop-content">
+        <div class="modal-content crop-box">
             <div class="modal-header">
-                <h2>✂️ 裁剪图片</h2>
+                <h3>✂️ 裁剪图片</h3>
                 <span class="close-btn" onclick="closeCropModal()">&times;</span>
             </div>
-            <div class="crop-container">
-                <img id="cropImage" src="" alt="待裁剪图片">
+            <div class="crop-body">
+                <img id="cropImage" src="">
             </div>
-            <div class="crop-actions">
-                <button class="btn-text" onclick="closeCropModal()">取消</button>
-                <button class="btn-primary" onclick="confirmCrop()">✅ 确认并识别</button>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCropModal()">取消</button>
+                <button class="btn btn-primary" onclick="confirmCrop()">✅ 确认使用</button>
             </div>
         </div>
     </div>
 
     <div id="editModal" class="modal">
-        <div class="modal-content pro-modal">
+        <div class="modal-content edit-box">
             <div class="modal-header">
-                <h2>📝 编辑档案</h2>
-                <span class="close-btn" id="closeEditModal">&times;</span>
+                <h3 id="modalTitle">编辑档案</h3>
+                <span class="close-btn">&times;</span>
             </div>
             
-            <div class="modal-body-grid">
-                <div class="modal-left">
-                    <div class="img-preview-box">
-                        <img id="modalImg" src="" alt="预览图">
-                        <div id="aiStatus" class="ai-status" style="display:none">🤖 AI 分析中...</div>
+            <div class="edit-layout">
+                <div class="edit-left">
+                    <div class="preview-container">
+                        <img id="modalImg" src="" class="main-preview">
+                        <div id="aiStatus" class="ai-tag">🤖 AI 正在识别中...</div>
                     </div>
-                    <div class="file-info">
-                        <label>文件名:</label>
-                        <input type="text" id="editFilename" disabled>
+                    
+                    <div class="related-section">
+                        <h4>🔗 同款关联图 (同代码)</h4>
+                        <div id="related-images-container" class="related-list">
+                            </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label>文件名 (只读)</label>
+                        <input type="text" id="editFilename" disabled class="input-readonly">
                     </div>
                 </div>
 
-                <div class="modal-right">
-                    <div class="form-group highlight-group">
-                        <label>📍 存放位置:</label>
-                        <input type="text" id="editLocation" list="location-list" placeholder="输入或选择位置...">
+                <div class="edit-right">
+                    <div class="form-group location-group">
+                        <label>📍 存放位置</label>
+                        <input type="text" id="editLocation" list="location-list" class="form-input" placeholder="例如: 主卧衣柜左侧">
                         <datalist id="location-list"></datalist>
                     </div>
 
                     <div class="form-row">
-                        <div class="form-group">
-                            <label>主分类:</label>
-                            <select id="editCategory" onchange="updateSubCategoryOptions()"></select>
+                        <div class="form-group half">
+                            <label>主分类</label>
+                            <select id="editCategory" class="form-input" onchange="updateSubCategoryOptions()"></select>
                         </div>
-                        <div class="form-group">
-                            <label>子分类:</label>
-                            <input type="text" id="editSubCategory" list="sub-cat-list" placeholder="如: 卫衣">
+                        <div class="form-group half">
+                            <label>子分类</label>
+                            <input type="text" id="editSubCategory" list="sub-cat-list" class="form-input" placeholder="选择或输入">
                             <datalist id="sub-cat-list"></datalist>
                         </div>
                     </div>
 
                     <div class="form-row">
-                        <div class="form-group">
-                            <label>季节:</label>
-                            <select id="editSeason"></select>
+                        <div class="form-group half">
+                            <label>季节</label>
+                            <select id="editSeason" class="form-input"></select>
                         </div>
-                        <div class="form-group" style="flex: 2;">
-                            <label>颜色 (可多选):</label>
-                            <div id="color-checkbox-group" class="color-tags-container">
-                                </div>
+                        <div class="form-group half">
+                            <label>材质</label>
+                            <input type="text" id="editMaterial" class="form-input">
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label>材质:</label>
-                        <input type="text" id="editMaterial" placeholder="如: 棉麻">
+                        <label>颜色 (多选)</label>
+                        <div id="color-checkbox-group" class="tags-container"></div>
                     </div>
 
                     <div class="form-group">
-                        <label>📝 说明:</label>
-                        <textarea id="editDescription" rows="2" placeholder="例如: 经典黑色连衣裙，适合年会"></textarea>
+                        <label>📝 说明文字</label>
+                        <textarea id="editDescription" class="form-input" rows="3" placeholder="例如：去年双十一买的，适合搭配牛仔裤"></textarea>
                     </div>
 
-                    <button id="saveBtn" class="btn-primary full-width">💾 保存档案</button>
+                    <div class="action-footer">
+                        <button id="deleteBtn" class="btn btn-danger" onclick="deleteItem()">🗑️ 删除此衣物</button>
+                        <button id="saveBtn" class="btn btn-primary" onclick="saveChanges()">💾 保存更改</button>
+                    </div>
                 </div>
             </div>
         </div>
