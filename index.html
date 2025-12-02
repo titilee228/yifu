@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的智能衣橱 Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <link rel="stylesheet" href="style.css?v=5"> </head>
+<body>
+    <div class="container">
+        <div class="top-navbar">
+            <div class="nav-header">
+                <div class="brand-area">
+                    <h1>👕 智能衣橱 <span id="count" class="count-badge">(0)</span></h1>
+                    <div class="action-buttons">
+                        <button id="uploadBtn" class="btn-primary pulse-effect">➕ 添加新衣</button>
+                        <button id="forceScanBtn" class="btn-secondary">🔍 重新识别未分类</button>
+                        <button id="fillDescBtn" class="btn-secondary">📝 补全描述</button>
+                    </div>
+                </div>
+                <div class="search-area">
+                    <input type="text" id="searchInput" placeholder="🔍 搜索 (如: 红色 围巾 #1234)..." class="search-box">
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label>🏷️ 分类:</label>
+                    <select id="filterCategory"><option value="">全部</option></select>
+                </div>
+                <div class="filter-group">
+                    <label>🌤️ 天气:</label>
+                    <select id="filterSeason"><option value="">全部</option></select>
+                </div>
+                <div class="filter-group">
+                    <label>🎨 颜色:</label>
+                    <select id="filterColor"><option value="">全部</option></select>
+                </div>
+                <button id="resetFiltersBtn" class="btn-text">↺ 重置筛选</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="gallery" class="gallery">
+                </div>
+            
+            <div id="pagination" class="pagination-container">
+                </div>
+        </div>
+
+        <div id="autoScanStatus" class="auto-scan-status">
+            <div><span class="scan-loading"></span><span>AI 正在整理中...</span></div>
+            <span id="scanProgress">0/0</span>
+        </div>
+    </div>
+
+    <div id="cropModal" class="modal">
+        <div class="modal-content crop-content">
+            <div class="modal-header">
+                <h2>✂️ 裁剪图片</h2>
+                <span class="close-btn" onclick="closeCropModal()">&times;</span>
+            </div>
+            <div class="crop-container">
+                <img id="cropImage" src="" alt="待裁剪图片">
+            </div>
+            <div class="crop-actions">
+                <button class="btn-text" onclick="closeCropModal()">取消</button>
+                <button class="btn-primary" onclick="confirmCrop()">✅ 确认并识别</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content pro-modal">
+            <div class="modal-header">
+                <h2>📝 编辑档案</h2>
+                <span class="close-btn" id="closeEditModal">&times;</span>
+            </div>
+            
+            <div class="modal-body-grid">
+                <div class="modal-left">
+                    <div class="img-preview-box">
+                        <img id="modalImg" src="" alt="预览图">
+                        <div id="aiStatus" class="ai-status" style="display:none">🤖 AI 分析中...</div>
+                    </div>
+                    <div class="file-info">
+                        <label>文件名:</label>
+                        <input type="text" id="editFilename" disabled>
+                    </div>
+                </div>
+
+                <div class="modal-right">
+                    <div class="form-group highlight-group">
+                        <label>📍 存放位置:</label>
+                        <input type="text" id="editLocation" list="location-list" placeholder="输入或选择位置...">
+                        <datalist id="location-list"></datalist>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>主分类:</label>
+                            <select id="editCategory" onchange="updateSubCategoryOptions()"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>子分类:</label>
+                            <input type="text" id="editSubCategory" list="sub-cat-list" placeholder="如: 卫衣">
+                            <datalist id="sub-cat-list"></datalist>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>季节:</label>
+                            <select id="editSeason"></select>
+                        </div>
+                        <div class="form-group" style="flex: 2;">
+                            <label>颜色 (可多选):</label>
+                            <div id="color-checkbox-group" class="color-tags-container">
+                                </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>材质:</label>
+                        <input type="text" id="editMaterial" placeholder="如: 棉麻">
+                    </div>
+
+                    <div class="form-group">
+                        <label>📝 说明:</label>
+                        <textarea id="editDescription" rows="2" placeholder="例如: 经典黑色连衣裙，适合年会"></textarea>
+                    </div>
+
+                    <button id="saveBtn" class="btn-primary full-width">💾 保存档案</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
