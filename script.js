@@ -10,21 +10,22 @@ let cropper = null;
 
 // === 分页配置 ===
 let currentPage = 1;
-const itemsPerPage = 56; // 8行 x 7列
+const itemsPerPage = 56; 
 let currentFilteredItems = [];
 
-// === 分类字典 ===
+// === 分类字典 (更新: 加入T恤) ===
 const CATEGORY_TREE = {
-    "衣服": ["西装外套", "大衣", "风衣", "连衣裙", "套装", "夹克", "羽绒服", "卫衣", "棉衣", "毛衫", "上衣", "牛仔外套", "外套", "裤子", "牛仔裤", "短裤", "半裙"],
+    "衣服": ["西装外套", "大衣", "风衣", "连衣裙", "套装", "夹克", "羽绒服", "卫衣", "棉衣", "毛衫", "上衣", "T恤", "牛仔外套", "外套", "裤子", "牛仔裤", "短裤", "半裙"],
     "配饰": ["手镯", "耳环", "项链", "包包", "围巾", "帽饰", "胸针", "腰带", "眼镜", "手套"],
     "其他": ["其他"]
 };
 
-const WEATHER_TYPES = ["炎热(夏季)", "舒适(春秋)", "寒冷(冬季)"];
+const WEATHER_TYPES = ["炎热", "舒适", "寒冷"]; // 简化显示
+// 更新颜色: 加入多色
 const COLOR_TYPES = [
     "黑色", "灰色", "白色", "米色", "棕色", 
     "黄色", "橙色", "红色", "粉色", "紫色", 
-    "蓝色", "绿色", "金色", "银色", "玫瑰金"
+    "蓝色", "绿色", "金色", "银色", "玫瑰金", "多色"
 ];
 
 // === 1. 初始化 & 加载 ===
@@ -41,6 +42,7 @@ function initOptions() {
             });
         });
     }
+    // 简单的天气筛选
     if (filterSeason.options.length <= 1) {
         WEATHER_TYPES.forEach(w => filterSeason.add(new Option(w, w)));
     }
@@ -87,9 +89,7 @@ async function loadData() {
     try {
         initOptions();
         const response = await fetch('/api/clothes');
-        if (!response.ok) throw new Error("API Error");
         allClothes = await response.json();
-        
         currentFilteredItems = allClothes;
         updateLocationSuggestions();
         updateCount(allClothes.length);
@@ -97,11 +97,10 @@ async function loadData() {
         setupInteractions();
     } catch (e) {
         console.error("加载失败", e);
-        alert("无法连接服务器");
     }
 }
 
-// === 2. 渲染与分页 (修复卡片布局) ===
+// === 2. 渲染画廊 ===
 function renderGallery(items) {
     const totalPages = Math.ceil(items.length / itemsPerPage);
     if (currentPage > totalPages) currentPage = 1;
@@ -123,21 +122,19 @@ function renderGallery(items) {
     pageItems.forEach(item => {
         const card = document.createElement('div');
         card.className = 'card';
-        // 点击卡片本体打开编辑
         card.onclick = (e) => {
-            // 如果点击的是删除按钮，不触发编辑
             if (e.target.closest('.card-delete-btn')) return;
             openEditModal(item);
         };
         
         const imgPath = item.path.replace(/\\/g, '/');
+        // 显示: 子分类 + 颜色
         const displayTitle = `${item.tags.sub_category || item.tags.category} ${item.tags.color || ''}`;
         
-        // 增加删除按钮 HTML
         card.innerHTML = `
             <div class="img-box">
                 <img src="${imgPath}" loading="lazy">
-                <div class="card-delete-btn" onclick="deleteItemFromCard('${item.filename}')" title="删除此衣物">🗑️</div>
+                <div class="card-delete-btn" onclick="deleteItemFromCard('${item.filename}')" title="移入回收站">🗑️</div>
             </div>
             <div class="info">
                 <div class="info-top">
@@ -156,20 +153,16 @@ function renderGallery(items) {
     renderPaginationNumbers(totalPages);
 }
 
-// 分页条
 function renderPaginationNumbers(totalPages) {
     const container = document.getElementById('pagination');
     container.innerHTML = '';
-    
     if (totalPages <= 1) return;
 
     const createBtn = (text, page, isActive = false, isDisabled = false) => {
         const btn = document.createElement('div');
         btn.className = `page-btn ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`;
         btn.innerHTML = text;
-        if (!isDisabled && !isActive) {
-            btn.onclick = () => changePage(page);
-        }
+        if (!isDisabled && !isActive) btn.onclick = () => changePage(page);
         return btn;
     };
 
@@ -201,13 +194,9 @@ function renderPaginationNumbers(totalPages) {
 
     container.appendChild(createBtn('&gt;', currentPage + 1, false, currentPage === totalPages));
 
-    // 跳转输入框
     const jumpBox = document.createElement('div');
     jumpBox.className = 'jump-box';
-    jumpBox.innerHTML = `
-        <input type="number" id="jumpInput" min="1" max="${totalPages}" placeholder="页">
-        <button id="jumpBtn">GO</button>
-    `;
+    jumpBox.innerHTML = `<input type="number" id="jumpInput" min="1" max="${totalPages}" placeholder="页"><button id="jumpBtn">GO</button>`;
     container.appendChild(jumpBox);
 
     document.getElementById('jumpBtn').onclick = () => {
@@ -222,11 +211,27 @@ function changePage(p) {
     document.querySelector('.content-area').scrollTop = 0;
 }
 
-// === 3. 编辑 & 删除逻辑 ===
+// === 3. 编辑 & 删除 & 关联 ===
 function openEditModal(item, isNew = false) {
     const modal = document.getElementById('editModal');
     modal.style.display = 'block';
     
+    // 动态添加“代码”输入框（如果不存在）
+    let codeContainer = document.getElementById('code-input-container');
+    if (!codeContainer) {
+        const fileInfoDiv = document.querySelector('.edit-left .form-group'); // 文件名那一行
+        codeContainer = document.createElement('div');
+        codeContainer.id = 'code-input-container';
+        codeContainer.className = 'form-group';
+        codeContainer.style.marginTop = '10px';
+        codeContainer.innerHTML = `
+            <label style="color:#10a37f;font-weight:bold;">🔢 衣物代码 (同款请填相同码)</label>
+            <input type="text" id="editCode" class="form-input" placeholder="自动生成" style="font-family:monospace; font-weight:bold;">
+        `;
+        fileInfoDiv.after(codeContainer);
+    }
+
+    // 重置颜色
     document.querySelectorAll('input[name="color-option"]').forEach(cb => {
         cb.checked = false; 
         cb.parentElement.classList.remove('checked');
@@ -236,11 +241,13 @@ function openEditModal(item, isNew = false) {
     if (isNew) {
         currentEditingItem = { isNew: true };
         document.getElementById('modalTitle').textContent = "✨ 新衣入库";
-        document.getElementById('editFilename').value = "自动生成...";
+        document.getElementById('editFilename').value = "保存后自动生成...";
         document.getElementById('editLocation').value = "";
         document.getElementById('editCategory').value = "衣服";
         updateSubCategoryOptions();
         document.getElementById('editDescription').value = "";
+        document.getElementById('editCode').value = ""; // 空代表自动生成
+        document.getElementById('editCode').placeholder = "留空自动生成";
     } else {
         currentEditingItem = item;
         document.getElementById('modalTitle').textContent = "📝 编辑详情";
@@ -249,21 +256,25 @@ function openEditModal(item, isNew = false) {
         document.getElementById('modalImg').src = item.path;
         document.getElementById('editFilename').value = item.filename;
         document.getElementById('editLocation').value = item.location || '';
+        document.getElementById('editCode').value = item.code || '';
         
         document.getElementById('editCategory').value = item.tags.category || '衣服';
         updateSubCategoryOptions();
         document.getElementById('editSubCategory').value = item.tags.sub_category || '';
-        document.getElementById('editSeason').value = item.tags.season || '舒适(春秋)';
+        document.getElementById('editSeason').value = item.tags.season || '舒适';
         document.getElementById('editDescription').value = item.description || '';
         
+        // 颜色回显 (支持 + 号分割)
         const colorStr = item.tags.color || '';
+        const colorArr = colorStr.includes('+') ? colorStr.split('+') : [colorStr];
         document.querySelectorAll('input[name="color-option"]').forEach(cb => {
-            if (colorStr.includes(cb.value)) {
+            if (colorArr.includes(cb.value)) {
                 cb.checked = true;
                 cb.parentElement.classList.add('checked');
             }
         });
 
+        // 关联图逻辑
         if (item.code) {
             const relatedItems = allClothes.filter(i => i.code === item.code && i.filename !== item.filename);
             if (relatedItems.length > 0) {
@@ -273,7 +284,7 @@ function openEditModal(item, isNew = false) {
                     const img = document.createElement('img');
                     img.src = rel.path;
                     img.className = 'related-thumb';
-                    img.title = "点击切换到这张图";
+                    img.title = `点击切换: ${rel.filename}`;
                     img.onclick = () => openEditModal(rel);
                     container.appendChild(img);
                 });
@@ -300,18 +311,20 @@ async function saveChanges() {
     btn.textContent = "💾 保存中...";
     btn.disabled = true;
 
+    // 颜色用 + 连接
     const checkedColors = Array.from(document.querySelectorAll('input[name="color-option"]:checked')).map(cb => cb.value);
     const tags = {
         category: document.getElementById('editCategory').value,
         sub_category: document.getElementById('editSubCategory').value,
         season: document.getElementById('editSeason').value,
-        color: checkedColors.join('、')
+        color: checkedColors.join('+') // 修改连接符
     };
     
     const body = {
         location: document.getElementById('editLocation').value,
         tags: tags,
-        description: document.getElementById('editDescription').value
+        description: document.getElementById('editDescription').value,
+        code: document.getElementById('editCode').value // 提交手动修改的代码
     };
 
     let url = '/api/update';
@@ -328,21 +341,20 @@ async function saveChanges() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(body)
         });
-        if (!response.ok) throw new Error("Fail");
+        if (!response.ok) throw new Error("保存失败");
         document.getElementById('editModal').style.display = 'none';
         await loadData();
     } catch(e) {
-        alert("保存失败");
+        alert("保存出错: " + e);
     } finally {
         btn.textContent = "💾 保存更改";
         btn.disabled = false;
     }
 }
 
-// === 列表页直接删除 ===
+// === 删除逻辑 (修改文案) ===
 async function deleteItemFromCard(filename) {
-    // 阻止冒泡已经通过onclick处理，这里只做逻辑
-    if (!confirm("⚠️ 确定要删除这件衣物吗？\n删除后将无法恢复！")) return;
+    if (!confirm("⚠️ 确定要删除这件衣物吗？\n它将被移动到【回收站】文件夹。")) return;
     
     try {
         const response = await fetch('/api/delete', {
@@ -351,19 +363,13 @@ async function deleteItemFromCard(filename) {
             body: JSON.stringify({ filename: filename })
         });
         
-        if (response.ok) {
-            await loadData(); // 刷新
-        } else {
-            alert("删除失败");
-        }
-    } catch (e) {
-        alert("请求错误: " + e);
-    }
+        if (response.ok) await loadData();
+        else alert("删除失败");
+    } catch (e) { alert("Error: " + e); }
 }
 
-// 弹窗内的删除按钮（可选保留）
 async function deleteItem() {
-    if (!confirm("⚠️ 确定要删除这件衣物吗？\n删除后将无法恢复！")) return;
+    if (!confirm("⚠️ 确定要删除这件衣物吗？\n它将被移动到【回收站】文件夹。")) return;
     try {
         const response = await fetch('/api/delete', {
             method: 'POST',
@@ -373,10 +379,8 @@ async function deleteItem() {
         if (response.ok) {
             document.getElementById('editModal').style.display = 'none';
             await loadData();
-        } else {
-            alert("删除失败");
-        }
-    } catch (e) { alert("请求错误: " + e); }
+        } else alert("删除失败");
+    } catch (e) { alert("Error: " + e); }
 }
 
 // === 上传与裁剪 ===
@@ -434,11 +438,14 @@ async function confirmCrop() {
             updateSubCategoryOptions();
         }
         if (tags.sub_category) document.getElementById('editSubCategory').value = tags.sub_category;
-        if (tags.season) document.getElementById('editSeason').value = tags.season;
+        if (tags.season) document.getElementById('editSeason').value = tags.season.replace("（", "").replace("）", "").replace("(", "").replace(")", "").replace("夏季", "").replace("冬季", "").replace("春秋", ""); // 清洗AI返回的格式
         if (tags.description) document.getElementById('editDescription').value = tags.description;
+        
+        // 颜色多选回显
         if (tags.color) {
+            const colors = tags.color.split('+');
             document.querySelectorAll('input[name="color-option"]').forEach(cb => {
-                if (tags.color.includes(cb.value)) {
+                if (colors.includes(cb.value)) {
                     cb.checked = true;
                     cb.parentElement.classList.add('checked');
                 }
@@ -475,7 +482,7 @@ function setupInteractions() {
                     matchCat = (item.tags.sub_category === cat) || (item.tags.category === cat);
                 }
             }
-            const matchSea = !sea || (item.tags.season === sea);
+            const matchSea = !sea || (item.tags.season && item.tags.season.includes(sea)); // 模糊匹配季节
             const matchCol = !col || (item.tags.color && item.tags.color.includes(col));
             return matchText && matchCat && matchSea && matchCol;
         });
